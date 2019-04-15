@@ -1,0 +1,15 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+.app-container {
+  background-image: linear-gradient(123deg, #00d0be, #8f5be1);
+  height: auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
