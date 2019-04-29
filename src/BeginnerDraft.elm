@@ -4,7 +4,6 @@ import Browser
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
-import Http
 
 
 type alias Model =
@@ -13,38 +12,23 @@ type alias Model =
 
 initModel : Model
 initModel =
-    "Finding a joke..."
+    "Finding a joke"
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( initModel, randomJoke )
-
-
-randomJoke : Cmd Msg
-randomJoke =
-    Http.get
-        { url = "http://api.icndb.com/jokes/random"
-        , expect = Http.expectString Joke
-        }
+    ( initModel, Cmd.none )
 
 
 type Msg
-    = Joke (Result Http.Error String)
-    | NewJoke
+    = Joke String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Joke (Ok joke) ->
-            ( joke, Cmd.none )
-
-        Joke (Err err) ->
-            ( Debug.toString err, Cmd.none )
-
-        NewJoke ->
-            ( "fetching joke ...", randomJoke )
+        Joke str ->
+            ( str, Cmd.none )
 
 
 main : Program () Model Msg
@@ -64,9 +48,4 @@ view model =
             [ Html.text "playground" ]
         , Html.div []
             [ Html.text model ]
-        , Html.div []
-            [ Html.button
-                [ Events.onClick NewJoke ]
-                [ Html.text "qq" ]
-            ]
         ]
