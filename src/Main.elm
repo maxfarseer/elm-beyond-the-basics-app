@@ -5,23 +5,26 @@ import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
 import Http
-import Json.Decode exposing (Decoder, field, string)
+import Json.Decode exposing (Decoder, at, field, int, list, map3, string)
 
 
 type alias JokeRecord =
-    { value : String
-    , id : Int
+    { id : Int
+    , joke : String
     , categories : List String
     }
 
 
 type alias Model =
-    String
+    JokeRecord
 
 
 initModel : Model
 initModel =
-    "Finding a joke..."
+    { joke = "fetching joke..."
+    , id = 0
+    , categories = []
+    }
 
 
 init : () -> ( Model, Cmd Msg )
@@ -29,9 +32,14 @@ init _ =
     ( initModel, randomJoke )
 
 
-jokeDecoder : Decoder String
+jokeDecoder : Decoder JokeRecord
 jokeDecoder =
-    field "value" (field "joke" string)
+    -- field "value" (field "joke" string)
+    map3 JokeRecord
+        (field "id" int)
+        (field "joke" string)
+        (field "categories" (list string))
+        |> at [ "value" ]
 
 
 randomJoke : Cmd Msg
@@ -43,7 +51,7 @@ randomJoke =
 
 
 type Msg
-    = Joke (Result Http.Error String)
+    = Joke (Result Http.Error JokeRecord)
     | NewJoke
 
 
@@ -54,10 +62,10 @@ update msg model =
             ( joke, Cmd.none )
 
         Joke (Err err) ->
-            ( Debug.toString err, Cmd.none )
+            ( { model | joke = Debug.toString err }, Cmd.none )
 
         NewJoke ->
-            ( "fetching joke ...", randomJoke )
+            ( initModel, randomJoke )
 
 
 main : Program () Model Msg
@@ -70,13 +78,21 @@ main =
         }
 
 
+formatJoke : JokeRecord -> Html Msg
+formatJoke record =
+    Html.div []
+        [ Html.p [] [ Html.text <| String.fromInt record.id ++ " | " ++ record.joke ]
+        , Html.p [] [ Html.text ("Categories: " ++ String.join ", " record.categories) ]
+        ]
+
+
 view : Model -> Html Msg
 view model =
     Html.div [ Attr.class "playground" ]
         [ Html.h1 []
             [ Html.text "playground" ]
         , Html.div []
-            [ Html.text model ]
+            [ formatJoke model ]
         , Html.div []
             [ Html.button
                 [ Events.onClick NewJoke ]
