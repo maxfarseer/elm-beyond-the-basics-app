@@ -5,6 +5,14 @@ import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
 import Http
+import Json.Decode exposing (Decoder, field, string)
+
+
+type alias JokeRecord =
+    { value : String
+    , id : Int
+    , categories : List String
+    }
 
 
 type alias Model =
@@ -21,11 +29,16 @@ init _ =
     ( initModel, randomJoke )
 
 
+jokeDecoder : Decoder String
+jokeDecoder =
+    field "value" (field "joke" string)
+
+
 randomJoke : Cmd Msg
 randomJoke =
     Http.get
         { url = "http://api.icndb.com/jokes/random"
-        , expect = Http.expectString Joke
+        , expect = Http.expectJson Joke jokeDecoder
         }
 
 
@@ -67,6 +80,6 @@ view model =
         , Html.div []
             [ Html.button
                 [ Events.onClick NewJoke ]
-                [ Html.text "qq" ]
+                [ Html.text "New joke" ]
             ]
         ]
