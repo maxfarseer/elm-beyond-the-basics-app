@@ -1,71 +1,155 @@
-module Main exposing (main)
+port module Main exposing (Customer, Model, Msg(..), addCustomer, customerSaved, deleteCustomer, init, initModel, main, newCustomer, subscriptions, update, view, viewCustomer, viewCustomerForm, viewCustomers)
 
 import Browser
-import Html exposing (Html)
-import Html.Attributes as Attr
-import Html.Events as Events
-import Http
-import Json.Decode exposing (Decoder, at, field, int, list, map3, string)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 
 
-type alias JokeRecord =
-    { id : Int
-    , joke : String
-    , categories : List String
+
+-- model
+
+
+type alias Customer =
+    { id : String
+    , name : String
     }
 
 
 type alias Model =
-    JokeRecord
+    { name : String
+    , customers : List Customer
+    , error : Maybe String
+    , nextId : Int
+    }
 
 
 initModel : Model
 initModel =
-    { joke = "fetching joke..."
-    , id = 0
-    , categories = []
+    { name = ""
+    , customers = []
+    , error = Nothing
+    , nextId = 1
     }
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( initModel, randomJoke )
+    ( initModel, Cmd.none )
 
 
-jokeDecoder : Decoder JokeRecord
-jokeDecoder =
-    -- field "value" (field "joke" string)
-    map3 JokeRecord
-        (field "id" int)
-        (field "joke" string)
-        (field "categories" (list string))
-        |> at [ "value" ]
 
-
-randomJoke : Cmd Msg
-randomJoke =
-    Http.get
-        { url = "http://api.icndb.com/jokes/random"
-        , expect = Http.expectJson Joke jokeDecoder
-        }
+-- update
 
 
 type Msg
-    = Joke (Result Http.Error JokeRecord)
-    | NewJoke
+    = NameInput String
+    | SaveCustomer
+    | CustomerSaved String
+    | CustomerAdded Customer
+    | RemoveCustomer Customer
+    | CustomerDeleted String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        _ =
+            Debug.log "msg" msg
+    in
     case msg of
-        Joke (Ok joke) ->
-            ( joke, Cmd.none )
+        NameInput name ->
+            ( { model | name = name }, Cmd.none )
 
-        Joke (Err err) ->
-            ( { model | joke = Debug.toString err }, Cmd.none )
+        SaveCustomer ->
+            ( model, addCustomer model.name )
 
-        NewJoke ->
-            ( initModel, randomJoke )
+        CustomerSaved key ->
+            ( { model | name = "" }, Cmd.none )
+
+        CustomerAdded customer ->
+            let
+                newCustomers =
+                    customer :: model.customers
+            in
+            ( { model | customers = newCustomers }, Cmd.none )
+
+        RemoveCustomer customer ->
+            ( model, deleteCustomer customer )
+
+        CustomerDeleted id ->
+            let
+                newCustomers =
+                    List.filter (\n -> n.id /= id) model.customers
+            in
+            ( { model | customers = newCustomers }, Cmd.none )
+
+
+
+-- view
+
+
+viewCustomer : Customer -> Html Msg
+viewCustomer customer =
+    li []
+        [ i [ class "remove", onClick (RemoveCustomer customer) ] []
+        , text <| customer.name ++ " | " ++ customer.id
+        ]
+
+
+viewCustomers : List Customer -> Html Msg
+viewCustomers customers =
+    customers
+        |> List.sortBy .id
+        |> List.map viewCustomer
+        |> ul []
+
+
+viewCustomerForm : Model -> Html Msg
+viewCustomerForm model =
+    Html.form [ onSubmit SaveCustomer ]
+        [ input [ type_ "text", onInput NameInput, value model.name ] []
+        , text <| Maybe.withDefault "" model.error
+        , button [ type_ "submit" ] [ text "Save" ]
+        ]
+
+
+view : Model -> Html Msg
+view model =
+    div []
+        [ h1 [] [ text "Customer List" ]
+        , viewCustomerForm model
+        , viewCustomers model.customers
+        ]
+
+
+
+-- subscription
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    -- Sub.none
+    Sub.batch
+        [ customerSaved CustomerSaved
+        , newCustomer CustomerAdded
+        , customerDeleted CustomerDeleted
+        ]
+
+
+port addCustomer : String -> Cmd msg
+
+
+port customerSaved : (String -> msg) -> Sub msg
+
+
+port newCustomer : (Customer -> msg) -> Sub msg
+
+
+port deleteCustomer : Customer -> Cmd msg
+
+
+port customerDeleted : (String -> msg) -> Sub msg
 
 
 main : Program () Model Msg
@@ -74,28 +158,5 @@ main =
         { init = init
         , update = update
         , view = view
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         }
-
-
-formatJoke : JokeRecord -> Html Msg
-formatJoke record =
-    Html.div []
-        [ Html.p [] [ Html.text <| String.fromInt record.id ++ " | " ++ record.joke ]
-        , Html.p [] [ Html.text ("Categories: " ++ String.join ", " record.categories) ]
-        ]
-
-
-view : Model -> Html Msg
-view model =
-    Html.div [ Attr.class "playground" ]
-        [ Html.h1 []
-            [ Html.text "playground" ]
-        , Html.div []
-            [ formatJoke model ]
-        , Html.div []
-            [ Html.button
-                [ Events.onClick NewJoke ]
-                [ Html.text "New joke" ]
-            ]
-        ]

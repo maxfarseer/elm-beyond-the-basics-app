@@ -11,12 +11,43 @@
       </div>
     </main>
     <!-- <script src="//cdn.polyfill.io/v2/polyfill.min.js?features=default,fetch,es6,Array.prototype.includes"></script> -->
+    <script src="https://www.gstatic.com/firebasejs/3.2.1/firebase.js"></script>
     <script src="./elm.js"></script>
+    <script src="./appfb.js"></script>
     <script>
       const errorLogger = error => console.error(`App Error: ${error}`);
       const node = document.querySelector('#app');
       try {
         const app = Elm.Main.init({ node });
+
+        /* ports */
+        app.ports.addCustomer.subscribe(function(customerName){
+          addCustomer({name: customerName})
+            .then(function(response){
+              console.log("Saved!");
+              app.ports.customerSaved.send(response.key);
+            }, function(err){
+              console.log("error:", err);
+            });
+        });
+
+        app.ports.deleteCustomer.subscribe( customer => {
+          deleteCustomer(customer)
+            .then( res => console.log('delete success')  
+            , err => console.log('delete error'))
+        })
+
+
+        var listener = customerListener();
+        listener.on("child_added", function(data){
+          var customer = Object.assign({id: data.key}, data.val());
+          app.ports.newCustomer.send(customer);
+        });
+        listener.on("child_removed", (data) => {
+          var deletedId = data.key
+          app.ports.customerDeleted.send(deletedId)
+        })
+
       } catch (e) {
         errorLogger(e);
         node.textContent = 'An error occurred while initializing the app';

@@ -13,3 +13,9 @@ body {
   justify-content: center;
   align-items: center;
 }
+
+.remove {
+  cursor: pointer;
+  padding: 5px;
+  border: 1px solid red;
+}
