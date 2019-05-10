@@ -1,14 +1,18 @@
-module Login exposing (Model, Msg(..), initModel, login, update, view)
+module Login exposing (Model, Msg(..), errorPanel, init, initModel, loginForm, subscriptions, update, view)
 
-import Browser
-import Html exposing (Html)
-import Html.Attributes as Attr
-import Html.Events as Events
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
+
+
+
+-- model
 
 
 type alias Model =
     { username : String
     , password : String
+    , error : Maybe String
     }
 
 
@@ -16,51 +20,96 @@ initModel : Model
 initModel =
     { username = ""
     , password = ""
+    , error = Nothing
     }
+
+
+init : ( Model, Cmd Msg )
+init =
+    ( initModel, Cmd.none )
+
+
+
+-- update
 
 
 type Msg
     = UsernameInput String
     | PasswordInput String
+    | Submit
+    | Error String
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         UsernameInput username ->
-            { model | username = username }
+            ( { model | username = username }, Cmd.none )
 
         PasswordInput password ->
-            { model | password = password }
+            ( { model | password = password }, Cmd.none )
+
+        Submit ->
+            ( model, Cmd.none )
+
+        Error error ->
+            ( { model | error = Just error }, Cmd.none )
+
+
+
+-- view
 
 
 view : Model -> Html Msg
 view model =
-    Html.div []
-        [ Html.h3 [] [ Html.text "Login Page... So far" ]
-        , Html.form []
-            [ Html.input
-                [ Attr.type_ "text"
-                , Events.onInput UsernameInput
-                , Attr.placeholder "username"
+    div [ class "main" ]
+        [ errorPanel model.error
+        , loginForm model
+        ]
+
+
+loginForm : Model -> Html Msg
+loginForm model =
+    Html.form [ class "add-runner", onSubmit Submit ]
+        [ fieldset []
+            [ legend [] [ text "Login" ]
+            , div []
+                [ label [] [ text "User Name" ]
+                , input
+                    [ type_ "text"
+                    , value model.username
+                    , onInput UsernameInput
+                    ]
+                    []
                 ]
-                []
-            , Html.input
-                [ Attr.type_ "password"
-                , Events.onInput PasswordInput
-                , Attr.placeholder "password"
+            , div []
+                [ label [] [ text "Password" ]
+                , input
+                    [ type_ "password"
+                    , value model.password
+                    , onInput PasswordInput
+                    ]
+                    []
                 ]
-                []
-            , Html.input [ Attr.type_ "submit" ]
-                [ Html.text "Login" ]
+            , div []
+                [ label [] []
+                , button [ type_ "submit" ] [ text "Login" ]
+                ]
             ]
         ]
 
 
-login : Program () Model Msg
-login =
-    Browser.sandbox
-        { init = initModel
-        , update = update
-        , view = view
-        }
+errorPanel : Maybe String -> Html a
+errorPanel error =
+    case error of
+        Nothing ->
+            text ""
+
+        Just msg ->
+            div [ class "error" ]
+                [ text msg ]
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.none
