@@ -1,4 +1,4 @@
-module Runner exposing (Model, Msg(..), ageInput, bibInput, errorPanel, init, initModel, subscriptions, update, view, viewForm)
+module Pages.Runner exposing (Model, Msg(..), ageInput, bibInput, errorPanel, init, initModel, subscriptions, update, view, viewForm)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -39,8 +39,8 @@ initModel =
     }
 
 
-init : ( Model, Cmd Msg )
-init =
+init : () -> ( Model, Cmd Msg )
+init _ =
     ( initModel, Cmd.none )
 
 

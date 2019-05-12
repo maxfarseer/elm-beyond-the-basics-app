@@ -1,4 +1,4 @@
-module LeaderBoard exposing (Model, Msg(..), Runner, errorPanel, init, initModel, runner, runners, runnersHeader, searchForm, subscriptions, tempRunners, update, view)
+module Pages.LeaderBoard exposing (Model, Msg(..), Runner, errorPanel, init, initModel, runner, runnersFunc, runnersHeader, searchForm, subscriptions, tempRunners, update, view)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -46,8 +46,8 @@ initModel =
     }
 
 
-init : ( Model, Cmd Msg )
-init =
+init : () -> ( Model, Cmd Msg )
+init _ =
     ( initModel, Cmd.none )
 
 
@@ -79,7 +79,7 @@ view model =
     div [ class "main" ]
         [ errorPanel model.error
         , searchForm model.query
-        , runners model
+        , runnersFunc model
         ]
 
 
@@ -110,8 +110,8 @@ searchForm query =
         ]
 
 
-runners : Model -> Html Msg
-runners { query, runners } =
+runnersFunc : Model -> Html Msg
+runnersFunc { query, runners } =
     runners
         |> List.map runner
         |> tbody []
@@ -124,12 +124,12 @@ runner { name, location, age, bib, estimatedDistance } =
     tr []
         [ td [] [ text name ]
         , td [] [ text location ]
-        , td [] [ text (toString age) ]
-        , td [] [ text (toString bib) ]
+        , td [] [ text (String.fromInt age) ]
+        , td [] [ text (String.fromInt bib) ]
         , td []
             [ text "1 mi @ 08:30AM (TODO)"
             ]
-        , td [] [ text (toString estimatedDistance) ]
+        , td [] [ text (String.fromFloat estimatedDistance) ]
         ]
 
 

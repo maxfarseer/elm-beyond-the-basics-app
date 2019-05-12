@@ -1,23 +1,27 @@
 <!-- index.html -->
 <html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0" />    
-    <link type="text/css" rel="stylesheet" href="./src/styles.css" />
-  </head>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Race Results</title>
+        <link rel="stylesheet" href="./src/styles.css">
+      </head>
   <body>
-    <main class="app-container">
+    
       <div id="app">
       </div>
-    </main>
-    <!-- <script src="//cdn.polyfill.io/v2/polyfill.min.js?features=default,fetch,es6,Array.prototype.includes"></script> -->
-    <script src="https://www.gstatic.com/firebasejs/3.2.1/firebase.js"></script>
+    
     <script src="./elm.js"></script>
-    <script src="./appfb.js"></script>
+    
     <script>
       const errorLogger = error => console.error(`App Error: ${error}`);
       const node = document.querySelector('#app');
+      
+      const flags = {
+        api: 'my-test-server-here',
+      }
       try {
-        const app = Elm.Main.init({ node });
+        const app = Elm.Main.init({ node, flags });
       } catch (e) {
         errorLogger(e);
         node.textContent = 'An error occurred while initializing the app';

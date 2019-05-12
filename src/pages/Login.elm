@@ -1,4 +1,4 @@
-module Login exposing (Model, Msg(..), errorPanel, init, initModel, loginForm, subscriptions, update, view)
+module Pages.Login exposing (Model, Msg(..), errorPanel, init, initModel, loginForm, subscriptions, update, view)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -24,8 +24,8 @@ initModel =
     }
 
 
-init : ( Model, Cmd Msg )
-init =
+init : () -> ( Model, Cmd Msg )
+init _ =
     ( initModel, Cmd.none )
 
 
