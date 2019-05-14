@@ -43,6 +43,20 @@ type Msg
     | LoggedOut
 
 
+authPages : List String
+authPages =
+    [ Routes.addPath ]
+
+
+authRedirect : Url -> Model -> Cmd Msg
+authRedirect url { navKey, loggedIn } =
+    if loggedIn || not (List.member url.path authPages) then
+        Nav.pushUrl navKey (Url.toString url)
+
+    else
+        Nav.pushUrl navKey "/login"
+
+
 init : Flags -> Url -> Key -> ( Model, Cmd Msg )
 init flags url navKey =
     let
@@ -101,7 +115,11 @@ update msg model =
         ( OnUrlRequest urlRequest, _ ) ->
             case urlRequest of
                 Browser.Internal url ->
-                    ( model, Nav.pushUrl model.navKey (Url.toString url) )
+                    let
+                        newCmd =
+                            authRedirect url model
+                    in
+                    ( model, newCmd )
 
                 Browser.External url ->
                     ( model, Nav.load url )
@@ -168,7 +186,16 @@ update msg model =
             ( model, Cmd.none )
 
         ( LoggedOut, _ ) ->
-            ( { model | token = Nothing, loggedIn = False }, removeToken () )
+            let
+                redirectCmd =
+                    Nav.pushUrl model.navKey "/"
+            in
+            ( { model | token = Nothing, loggedIn = False }
+            , Cmd.batch
+                [ removeToken ()
+                , redirectCmd
+                ]
+            )
 
 
 
@@ -232,13 +259,12 @@ pageHeader model =
         [ a [ href "/" ] [ text "Race Results" ]
         , ul []
             [ li []
-                [ a [ href "/" ] [ text "Link" ]
+                [ a [ href Routes.addPath ] [ text "Add runner" ]
                 ]
             ]
         , ul []
             [ li []
                 [ authHeaderView model
-                , a [ href Routes.addPath ] [ text "Add runner" ]
                 ]
             ]
         ]
