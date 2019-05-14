@@ -1,8 +1,13 @@
 module Pages.Login exposing (Model, Msg(..), errorPanel, init, initModel, loginForm, subscriptions, update, view)
 
+import Browser.Navigation exposing (Key, load, pushUrl)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Http
+import Json.Decode as JD exposing (Decoder, field)
+import Json.Encode as JE
+import Url
 
 
 
@@ -13,20 +18,27 @@ type alias Model =
     { username : String
     , password : String
     , error : Maybe String
+    , navKey : Key
     }
 
 
-initModel : Model
-initModel =
+initModel : Key -> Model
+initModel navKey =
     { username = ""
     , password = ""
     , error = Nothing
+    , navKey = navKey
     }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( initModel, Cmd.none )
+init : Key -> ( Model, Cmd Msg )
+init key =
+    ( initModel key, Cmd.none )
+
+
+tokenDecoder : Decoder String
+tokenDecoder =
+    field "token" JD.string
 
 
 
@@ -38,22 +50,72 @@ type Msg
     | PasswordInput String
     | Submit
     | Error String
+    | LoginResponse (Result Http.Error String)
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+url : String
+url =
+    "http://localhost:5000/authenticate"
+
+
+update : Msg -> Model -> ( Model, Cmd Msg, Maybe String )
 update msg model =
     case msg of
         UsernameInput username ->
-            ( { model | username = username }, Cmd.none )
+            ( { model | username = username }, Cmd.none, Nothing )
 
         PasswordInput password ->
-            ( { model | password = password }, Cmd.none )
+            ( { model | password = password }, Cmd.none, Nothing )
 
         Submit ->
-            ( model, Cmd.none )
+            let
+                rawBody =
+                    JE.object
+                        [ ( "username", JE.string model.username )
+                        , ( "password", JE.string model.password )
+                        ]
+
+                body =
+                    Http.jsonBody rawBody
+
+                cmd =
+                    Http.request
+                        { method = "POST"
+                        , headers = []
+                        , url = url
+                        , body = body
+                        , expect = Http.expectJson LoginResponse tokenDecoder
+                        , timeout = Nothing
+                        , tracker = Nothing
+                        }
+            in
+            ( model, cmd, Nothing )
+
+        LoginResponse (Ok token) ->
+            ( initModel model.navKey, pushUrl model.navKey "/", Just token )
+
+        LoginResponse (Err err) ->
+            let
+                _ =
+                    Debug.log "err" err
+
+                errMsg =
+                    case err of
+                        Http.BadStatus resp ->
+                            case resp of
+                                401 ->
+                                    "401"
+
+                                _ ->
+                                    "Error with unhandled Http.BadStatus"
+
+                        _ ->
+                            "Login error!"
+            in
+            ( { model | error = Just errMsg }, Cmd.none, Nothing )
 
         Error error ->
-            ( { model | error = Just error }, Cmd.none )
+            ( { model | error = Just error }, Cmd.none, Nothing )
 
 
 

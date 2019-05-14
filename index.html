@@ -19,9 +19,16 @@
       
       const flags = {
         api: 'my-test-server-here',
+        token: localStorage.getItem('ebtb-token')
       }
       try {
         const app = Elm.Main.init({ node, flags });
+        app.ports.saveToken.subscribe( token => {
+          localStorage.setItem('ebtb-token', token)
+        })
+        app.ports.removeToken.subscribe( () => {
+          localStorage.removeItem('ebtb-token')
+        })
       } catch (e) {
         errorLogger(e);
         node.textContent = 'An error occurred while initializing the app';

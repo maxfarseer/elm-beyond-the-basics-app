@@ -4,6 +4,7 @@ import Browser exposing (UrlRequest)
 import Browser.Navigation as Nav exposing (Key)
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Pages.LeaderBoard as LBPage
 import Pages.Login as LoginPage
 import Pages.Runner as RunnerPage
@@ -21,6 +22,8 @@ type alias Model =
     , navKey : Key
     , route : Route
     , page : Page
+    , token : Maybe String
+    , loggedIn : Bool
     }
 
 
@@ -37,6 +40,7 @@ type Msg
     | LoginPageMsg LoginPage.Msg
     | LBPageMsg LBPage.Msg
     | RunnerPageMsg RunnerPage.Msg
+    | LoggedOut
 
 
 init : Flags -> Url -> Key -> ( Model, Cmd Msg )
@@ -47,6 +51,8 @@ init flags url navKey =
             , navKey = navKey
             , route = Routes.parseUrl url
             , page = NotFound
+            , token = flags.token
+            , loggedIn = flags.token /= Nothing
             }
     in
     ( model, Cmd.none )
@@ -61,7 +67,7 @@ loadCurrentPage ( model, cmd ) =
                 Routes.LoginRoute ->
                     let
                         ( pageModel, pageCmd ) =
-                            LoginPage.init ()
+                            LoginPage.init model.navKey
                     in
                     ( LoginPage pageModel, Cmd.map LoginPageMsg pageCmd )
 
@@ -91,10 +97,6 @@ loadCurrentPage ( model, cmd ) =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    let
-        _ =
-            Debug.log "Update" ( msg, model.page )
-    in
     case ( msg, model.page ) of
         ( OnUrlRequest urlRequest, _ ) ->
             case urlRequest of
@@ -126,11 +128,29 @@ update msg model =
 
         ( LoginPageMsg subMsg, LoginPage pageModel ) ->
             let
-                ( newPageModel, newCmd ) =
+                ( newPageModel, newCmd, token ) =
                     LoginPage.update subMsg pageModel
+
+                loggedIn =
+                    token /= Nothing
+
+                saveTokenCmd =
+                    case token of
+                        Just jwt ->
+                            saveToken jwt
+
+                        Nothing ->
+                            Cmd.none
             in
-            ( { model | page = LoginPage newPageModel }
-            , Cmd.map LoginPageMsg newCmd
+            ( { model
+                | page = LoginPage newPageModel
+                , token = token
+                , loggedIn = loggedIn
+              }
+            , Cmd.batch
+                [ Cmd.map LoginPageMsg newCmd
+                , saveTokenCmd
+                ]
             )
 
         ( LoginPageMsg subMsg, _ ) ->
@@ -144,8 +164,11 @@ update msg model =
             in
             ( { model | page = RunnerPage newPageModel }, Cmd.map RunnerPageMsg newCmd )
 
-        ( _, _ ) ->
+        ( RunnerPageMsg subMsg, _ ) ->
             ( model, Cmd.none )
+
+        ( LoggedOut, _ ) ->
+            ( { model | token = Nothing, loggedIn = False }, removeToken () )
 
 
 
@@ -194,6 +217,15 @@ currentPage model =
         ]
 
 
+authHeaderView : Model -> Html Msg
+authHeaderView model =
+    if model.loggedIn then
+        a [ onClick LoggedOut ] [ text "Logout" ]
+
+    else
+        a [ href Routes.loginPath ] [ text "Login" ]
+
+
 pageHeader : Model -> Html Msg
 pageHeader model =
     header []
@@ -205,7 +237,7 @@ pageHeader model =
             ]
         , ul []
             [ li []
-                [ a [ href Routes.loginPath ] [ text "Login" ]
+                [ authHeaderView model
                 , a [ href Routes.addPath ] [ text "Add runner" ]
                 ]
             ]
@@ -231,3 +263,9 @@ main =
         , onUrlChange = OnUrlChange
         , onUrlRequest = OnUrlRequest
         }
+
+
+port saveToken : String -> Cmd msg
+
+
+port removeToken : () -> Cmd msg
