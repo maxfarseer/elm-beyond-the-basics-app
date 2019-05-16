@@ -178,7 +178,7 @@ update msg model =
         ( RunnerPageMsg subMsg, RunnerPage pageModel ) ->
             let
                 ( newPageModel, newCmd ) =
-                    RunnerPage.update subMsg pageModel
+                    RunnerPage.update (Maybe.withDefault "" model.token) subMsg pageModel
             in
             ( { model | page = RunnerPage newPageModel }, Cmd.map RunnerPageMsg newCmd )
 

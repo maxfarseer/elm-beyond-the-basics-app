@@ -3,11 +3,19 @@ module Pages.Runner exposing (Model, Msg(..), ageInput, bibInput, errorPanel, in
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import String
+import Http
+import Json.Decode as JD exposing (Decoder, field)
+import Json.Encode as JE
 
 
 
 -- model
+
+
+type Status
+    = Saving String
+    | Saved String
+    | NotSaved
 
 
 type alias Model =
@@ -21,6 +29,7 @@ type alias Model =
     , bib : String
     , bibError : Maybe String
     , error : Maybe String
+    , savingStatus : Status
     }
 
 
@@ -36,6 +45,7 @@ initModel =
     , bib = ""
     , bibError = Nothing
     , error = Nothing
+    , savingStatus = NotSaved
     }
 
 
@@ -54,10 +64,136 @@ type Msg
     | AgeInput String
     | BibInput String
     | Save
+    | SaveResponse (Result Http.Error String)
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+isValid : Model -> Bool
+isValid model =
+    model.nameError
+        == Nothing
+        && model.locationError
+        == Nothing
+        && model.ageError
+        == Nothing
+        && model.bibError
+        == Nothing
+
+
+validate : Model -> Model
+validate model =
+    model
+        |> validateName
+        |> validateLocation
+        |> validateAge
+        |> validateBib
+
+
+validateName : Model -> Model
+validateName model =
+    if String.isEmpty model.name then
+        { model
+            | nameError =
+                Just "Name is Required"
+        }
+
+    else
+        { model
+            | nameError = Nothing
+        }
+
+
+validateLocation : Model -> Model
+validateLocation model =
+    if String.isEmpty model.location then
+        { model
+            | locationError =
+                Just "Location is Required"
+        }
+
+    else
+        { model
+            | locationError = Nothing
+        }
+
+
+validateAge : Model -> Model
+validateAge model =
+    let
+        ageInt =
+            model.age
+                |> String.toInt
+                |> Maybe.withDefault 0
+    in
+    if ageInt <= 0 then
+        { model
+            | ageError =
+                Just "Age must be a postive number"
+        }
+
+    else
+        { model
+            | ageError = Nothing
+        }
+
+
+validateBib : Model -> Model
+validateBib model =
+    let
+        bibInt =
+            model.bib
+                |> String.toInt
+                |> Maybe.withDefault 0
+    in
+    if bibInt <= 0 then
+        { model
+            | bibError =
+                Just "Bib must be a positive number"
+        }
+
+    else
+        { model
+            | bibError = Nothing
+        }
+
+
+addRunnerDecoder : Decoder String
+addRunnerDecoder =
+    field "_id" JD.string
+
+
+save : String -> Model -> ( Model, Cmd Msg )
+save token model =
+    let
+        rawBody =
+            JE.object
+                [ ( "name", JE.string model.name )
+                , ( "location", JE.string model.location )
+                , ( "age", JE.string model.age )
+                , ( "bib", JE.string model.bib )
+                ]
+
+        body =
+            Http.jsonBody rawBody
+
+        headers =
+            [ Http.header "Authorization" ("Bearer " ++ token) ]
+
+        cmd =
+            Http.request
+                { method = "POST"
+                , headers = headers
+                , url = "http://localhost:5000/runner"
+                , body = body
+                , expect = Http.expectJson SaveResponse addRunnerDecoder
+                , timeout = Nothing
+                , tracker = Nothing
+                }
+    in
+    ( { model | savingStatus = Saving "Saving Runner..." }, cmd )
+
+
+update : String -> Msg -> Model -> ( Model, Cmd Msg )
+update token msg model =
     case msg of
         NameInput name ->
             ( { model
@@ -82,7 +218,35 @@ update msg model =
             bibInput model bib
 
         Save ->
-            ( model, Cmd.none )
+            let
+                updatedModel =
+                    validate model
+            in
+            if isValid updatedModel then
+                save token updatedModel
+
+            else
+                ( updatedModel, Cmd.none )
+
+        SaveResponse (Ok id) ->
+            ( { initModel | savingStatus = Saved "Runner Saved!" }, Cmd.none )
+
+        SaveResponse (Err err) ->
+            let
+                errMsg =
+                    case err of
+                        Http.BadStatus resp ->
+                            String.fromInt resp
+
+                        _ ->
+                            "Error Saving!"
+            in
+            ( { model
+                | error = Just errMsg
+                , savingStatus = NotSaved
+              }
+            , Cmd.none
+            )
 
 
 ageInput : Model -> String -> ( Model, Cmd Msg )
@@ -129,7 +293,27 @@ view : Model -> Html Msg
 view model =
     div [ class "main" ]
         [ errorPanel model.error
+        , statusPanel model.savingStatus
         , viewForm model
+        ]
+
+
+statusPanel : Status -> Html Msg
+statusPanel status =
+    let
+        statusText =
+            case status of
+                Saving savingMsg ->
+                    savingMsg
+
+                Saved savedMsg ->
+                    savedMsg
+
+                NotSaved ->
+                    ""
+    in
+    div [ class "warning" ]
+        [ text statusText
         ]
 
 

@@ -1,6 +1,6 @@
 # Scorekeeper app
 
-App made during this "[Elm Beyond the Basics](https://courses.knowthen.com/p/elm-beyond-the-basics)" tutorial
+App made during "[Elm Beyond the Basics](https://courses.knowthen.com/p/elm-beyond-the-basics)" tutorial
 
 ## Install & Run
 
