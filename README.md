@@ -11,6 +11,10 @@ yarn dev
 
 Open `localhost:1234`
 
+## Backend
+
+Backend for this project hosted in tutorial repo [here](https://github.com/knowthen/elm-beyond-basics/tree/master/RLBServer).
+
 ## Helpful Links
 
 - [Elm's Official Guide](https://guide.elm-lang.org/)
